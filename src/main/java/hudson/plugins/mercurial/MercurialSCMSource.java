@@ -57,11 +57,12 @@ public final class MercurialSCMSource extends SCMSource {
     private final String branchPattern;
     private final String modules;
     private final String subdir;
+    private final boolean useBookmarks;
     private final HgBrowser browser;
     private final boolean clean;
 
     @DataBoundConstructor
-    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern, String modules, String subdir, boolean useBookmarks, HgBrowser browser, boolean clean) {
         super(id);
         this.installation = installation;
         this.source = source;
@@ -69,6 +70,7 @@ public final class MercurialSCMSource extends SCMSource {
         this.branchPattern = branchPattern;
         this.modules = modules;
         this.subdir = subdir;
+        this.useBookmarks = useBookmarks;
         this.browser = browser;
         this.clean = clean;
     }
@@ -95,6 +97,9 @@ public final class MercurialSCMSource extends SCMSource {
 
     public String getSubdir() {
         return subdir;
+    }
+    public boolean getUseBookmarks() {
+        return useBookmarks;
     }
 
     public HgBrowser getBrowser() {
@@ -135,6 +140,9 @@ public final class MercurialSCMSource extends SCMSource {
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
             String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+            if(this.getUseBookmarks()){
+                heads += hg.popen(cache, listener, true, new ArgumentListBuilder("bookmarks", "--template", "{node} {bookmark}\\n"));
+            }
             Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
             for (String line : heads.split("\r?\n")) {
                 final String[] nodeBranch = line.split(" ", 2);

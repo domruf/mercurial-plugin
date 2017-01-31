@@ -139,12 +139,20 @@ public final class MercurialSCMSource extends SCMSource {
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-            String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+            StringBuffer heads = new StringBuffer(hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n")));
             if(this.getUseBookmarks()){
-                heads += hg.popen(cache, listener, true, new ArgumentListBuilder("bookmarks", "--template", "{node} {bookmark}\\n"));
+                String bookmarks = hg.popen(cache, listener, true, new ArgumentListBuilder("log", "--template", "{if(bookmarks, '{node} {bookmarks}\\n')}"));
+                if(!bookmarks.equals("")) {
+                    for (String line : bookmarks.split("\r?\n")) {
+                        final String[] nodeBookmarks = line.split(" ", 2);
+                        for (String bookmark : nodeBookmarks[1].split(" ")) {
+                            heads.append(nodeBookmarks[0] + " " + bookmark + "\n");
+                        }
+                    }
+                }
             }
             Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
-            for (String line : heads.split("\r?\n")) {
+            for (String line : heads.toString().split("\r?\n")) {
                 final String[] nodeBranch = line.split(" ", 2);
                 final String name = nodeBranch[1];
                 if (p.matcher(name).matches()) {
